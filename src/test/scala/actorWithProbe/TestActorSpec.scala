@@ -20,8 +20,16 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
       pingRef ! "ping"
       pongRef eventuallyReceiveMsg Ping
 
+      pingRef ! "ping"
+      pongRef.eventuallyReceiveMsgType[Ping.type]
+
       // High level API
       pingRef ! "ping" thenWaitFor pongRef receiving Ping
+      pingRef.!("ping").thenWaitFor(pongRef).receivingType[Ping.type]
+
+      // TestProbe API
+      pingRef ! "ping"
+      pongRef expectMsg Ping
     }
 
     "send a Ping message and then have a Pong answer" in {
@@ -41,8 +49,19 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
       pongRef eventuallyReceiveMsg Ping
       pingRef eventuallyReceiveMsg Pong
 
+      pingRef ! "ping"
+      pongRef.eventuallyReceiveMsgType[Ping.type]
+      pingRef.eventuallyReceiveMsgType[Pong.type]
+
       // High level API
       pingRef ! "ping" thenWaitFor pongRef receiving Ping andThenWaitMeReceiving Pong
+      pingRef.!("ping").thenWaitFor(pongRef).receivingType[Ping.type]().andThenWaitMeReceivingType[Pong.type]
+
+      // TestProbe API
+      pingRef ! "ping"
+      pingRef expectMsg "ping"
+      pongRef expectMsg Ping
+      pingRef expectMsg Pong
     }
   }
 
@@ -63,8 +82,17 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
       selfRef ! "Hello Jeff !!"
       selfRef eventuallyReceiveMsg Envelop("Hello Jeff !!")
 
+      selfRef ! "Hello Jeff !!"
+      selfRef.eventuallyReceiveMsgType[Envelop]
+
       // High level API
       selfRef ! "Hello Jeff !!" thenWaitMeReceiving Envelop("Hello Jeff !!")
+      selfRef.!("Hello Jeff !!").thenWaitMeReceivingType[Envelop]
+
+      // TestProbe API
+      selfRef ! "Hello Jeff !!"
+      selfRef expectMsg "Hello Jeff !!"
+      selfRef expectMsg Envelop("Hello Jeff !!")
     }
   }
 }

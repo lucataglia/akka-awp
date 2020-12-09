@@ -2,16 +2,16 @@ package actorWithProbe
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import akka.util.BoxedType
 
 import scala.concurrent.duration._
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 package object testkit {
 
   import ActorWithProbeCore.InitAWP
 
-  // Factory Method
+  // Factory Methods
   object ActorWithProbe {
     def actorOf(f: ActorRef => Props, name: String, verbose: Boolean)(
         implicit system: ActorSystem
@@ -49,23 +49,6 @@ package object testkit {
     }
   }
 
-  // Syntactic sugar
-  implicit def awpToActorRef(awp: ActorWithProbe): ActorRef = awp.ref
-
-  implicit class EnrichActorWithProbe(awp: ActorWithProbe) {
-    def eventuallyReceiveMsg(msg: Any, maxSeconds: Int = 5, hint: String = ""): Any = {
-      val hintOrElse =
-        if (hint.isEmpty)
-          s"${awp.probe.ref} waiting for ${msg.getClass}"
-        else hint
-
-      awp.probe.fishForMessage(hint = hintOrElse, max = maxSeconds seconds) {
-        case received =>
-          received == msg
-      }
-    }
-  }
-
   // TestKit Enhancer (declarative programming)
   case class ActorWithWaitingFor(me: ActorWithProbe) {
     // Me
@@ -76,6 +59,24 @@ package object testkit {
 
     def andThenWaitMeReceiving(semaphoreMsg: Any, maxSeconds: Int = 5, hint: String = ""): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receiving(semaphoreMsg, maxSeconds, hint)
+      this
+    }
+
+    def thenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
+      thenWaitMeReceivingType()
+
+    def thenWaitMeReceivingType[T](maxSeconds: Int = 5, hint: String = "")(
+        implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
+      ActorWithReceiving(me, this).receivingType(maxSeconds, hint)
+      this
+    }
+
+    def andThenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
+      andThenWaitMeReceivingType[T]()
+
+    def andThenWaitMeReceivingType[T](maxSeconds: Int = 5, hint: String = "")(
+        implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
+      ActorWithReceiving(me, this).receivingType[T](maxSeconds, hint)
       this
     }
 
@@ -102,6 +103,14 @@ package object testkit {
       awpReceiver.eventuallyReceiveMsg(semaphoreMsg, maxSeconds, hint)
       awwf
     }
+
+    def receivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
+      receivingType[T]()
+
+    def receivingType[T](maxSeconds: Int = 5, hint: String = "")(implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
+      awpReceiver.eventuallyReceiveMsgType[T](maxSeconds, hint)
+      awwf
+    }
   }
 
   case class ActorWithAllReceiving(awpReceivers: List[ActorWithProbe], awwf: ActorWithWaitingFor) {
@@ -112,6 +121,52 @@ package object testkit {
         hint
       ))
       awwf
+    }
+
+    def receivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
+      receivingType[T]()
+
+    def receivingType[T](maxSeconds: Int = 5, hint: String = "")(implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
+      awpReceivers foreach (_.eventuallyReceiveMsgType[T](
+        maxSeconds,
+        hint
+      ))
+      awwf
+    }
+  }
+
+  // Syntactic sugar
+  implicit def awpToActorRef(awp: ActorWithProbe): ActorRef = awp.ref
+  implicit def awpToTestProbe(awp: ActorWithProbe): TestProbe = awp.probe
+  implicit def awpToEnrichActorWithProbe(awp: ActorWithProbe): EnrichActorWithProbe = EnrichActorWithProbe(awp)
+
+  case class EnrichActorWithProbe(awp: ActorWithProbe) {
+    def eventuallyReceiveMsg(msg: Any, maxSeconds: Int = 5, hint: String = ""): Any = {
+      val hintOrElse =
+        if (hint.isEmpty)
+          s"${awp.probe.ref} waiting for ${msg.getClass}"
+        else hint
+
+      awp.probe.fishForMessage(hint = hintOrElse, max = maxSeconds seconds) {
+        case received =>
+          received == msg
+      }
+    }
+
+    def eventuallyReceiveMsgType[T](implicit msgType: ClassTag[T]): Unit =
+      eventuallyReceiveMsgType[T]()
+
+    def eventuallyReceiveMsgType[T](maxSeconds: Int = 5, hint: String = "")(implicit msgType: ClassTag[T]): Unit = {
+      val hintOrElse =
+        if (hint.isEmpty)
+          s"${awp.probe.ref} waiting for ${msgType.runtimeClass}"
+        else hint
+
+      awp.probe.fishForMessage(hint = hintOrElse, max = maxSeconds seconds) {
+        case received =>
+          msgType.runtimeClass.isInstance(received)
+
+      }
     }
   }
 

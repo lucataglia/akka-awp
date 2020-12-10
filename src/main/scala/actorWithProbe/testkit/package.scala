@@ -1,6 +1,6 @@
 package actorWithProbe
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Stash}
 import akka.testkit.TestProbe
 
 import scala.concurrent.duration._
@@ -9,10 +9,13 @@ import scala.reflect.ClassTag
 
 package object testkit {
 
-  import ActorWithProbeCore.InitAWP
+  private val DEFAULT_SECONDS = 5
+  private val DEFAULT_HINT = ""
 
   // Factory Methods
   object ActorWithProbe {
+    import ActorWithProbeCore.InitAWP
+
     def actorOf(f: ActorRef => Props, name: String, verbose: Boolean)(
         implicit system: ActorSystem
     ): ActorWithProbe = {
@@ -52,12 +55,16 @@ package object testkit {
   // TestKit Enhancer (declarative programming)
   case class ActorWithWaitingFor(me: ActorWithProbe) {
     // Me
-    def thenWaitMeReceiving(semaphoreMsg: Any, maxSeconds: Int = 5, hint: String = ""): ActorWithWaitingFor = {
+    def thenWaitMeReceiving(semaphoreMsg: Any,
+                            maxSeconds: Int = DEFAULT_SECONDS,
+                            hint: String = DEFAULT_HINT): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receiving(semaphoreMsg, maxSeconds, hint)
       this
     }
 
-    def andThenWaitMeReceiving(semaphoreMsg: Any, maxSeconds: Int = 5, hint: String = ""): ActorWithWaitingFor = {
+    def andThenWaitMeReceiving(semaphoreMsg: Any,
+                               maxSeconds: Int = DEFAULT_SECONDS,
+                               hint: String = DEFAULT_HINT): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receiving(semaphoreMsg, maxSeconds, hint)
       this
     }
@@ -65,7 +72,7 @@ package object testkit {
     def thenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       thenWaitMeReceivingType()
 
-    def thenWaitMeReceivingType[T](maxSeconds: Int = 5, hint: String = "")(
+    def thenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
         implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receivingType(maxSeconds, hint)
       this
@@ -74,7 +81,7 @@ package object testkit {
     def andThenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       andThenWaitMeReceivingType[T]()
 
-    def andThenWaitMeReceivingType[T](maxSeconds: Int = 5, hint: String = "")(
+    def andThenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
         implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receivingType[T](maxSeconds, hint)
       this
@@ -99,7 +106,9 @@ package object testkit {
   }
 
   case class ActorWithReceiving(awpReceiver: ActorWithProbe, awwf: ActorWithWaitingFor) {
-    def receiving(semaphoreMsg: Any, maxSeconds: Int = 5, hint: String = ""): ActorWithWaitingFor = {
+    def receiving(semaphoreMsg: Any,
+                  maxSeconds: Int = DEFAULT_SECONDS,
+                  hint: String = DEFAULT_HINT): ActorWithWaitingFor = {
       awpReceiver.eventuallyReceiveMsg(semaphoreMsg, maxSeconds, hint)
       awwf
     }
@@ -107,14 +116,17 @@ package object testkit {
     def receivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       receivingType[T]()
 
-    def receivingType[T](maxSeconds: Int = 5, hint: String = "")(implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
+    def receivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+        implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       awpReceiver.eventuallyReceiveMsgType[T](maxSeconds, hint)
       awwf
     }
   }
 
   case class ActorWithAllReceiving(awpReceivers: List[ActorWithProbe], awwf: ActorWithWaitingFor) {
-    def receiving(semaphoreMsg: Any, maxSeconds: Int = 5, hint: String = ""): ActorWithWaitingFor = {
+    def receiving(semaphoreMsg: Any,
+                  maxSeconds: Int = DEFAULT_SECONDS,
+                  hint: String = DEFAULT_HINT): ActorWithWaitingFor = {
       awpReceivers foreach (_.eventuallyReceiveMsg(
         semaphoreMsg,
         maxSeconds,
@@ -126,7 +138,8 @@ package object testkit {
     def receivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       receivingType[T]()
 
-    def receivingType[T](maxSeconds: Int = 5, hint: String = "")(implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
+    def receivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+        implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       awpReceivers foreach (_.eventuallyReceiveMsgType[T](
         maxSeconds,
         hint
@@ -141,7 +154,7 @@ package object testkit {
   implicit def awpToEnrichActorWithProbe(awp: ActorWithProbe): EnrichActorWithProbe = EnrichActorWithProbe(awp)
 
   case class EnrichActorWithProbe(awp: ActorWithProbe) {
-    def eventuallyReceiveMsg(msg: Any, maxSeconds: Int = 5, hint: String = ""): Any = {
+    def eventuallyReceiveMsg(msg: Any, maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT): Any = {
       val hintOrElse =
         if (hint.isEmpty)
           s"${awp.probe.ref} waiting for ${msg.getClass}"
@@ -156,7 +169,8 @@ package object testkit {
     def eventuallyReceiveMsgType[T](implicit msgType: ClassTag[T]): Unit =
       eventuallyReceiveMsgType[T]()
 
-    def eventuallyReceiveMsgType[T](maxSeconds: Int = 5, hint: String = "")(implicit msgType: ClassTag[T]): Unit = {
+    def eventuallyReceiveMsgType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+        implicit msgType: ClassTag[T]): Unit = {
       val hintOrElse =
         if (hint.isEmpty)
           s"${awp.probe.ref} waiting for ${msgType.runtimeClass}"
@@ -171,23 +185,35 @@ package object testkit {
   }
 
   // Core
-  class ActorWithProbeCore(verbose: Boolean) extends Actor with ActorLogging {
-    private val prefix = "[AWP]".withCyan
-    private val sSender = "sender".withUnderline
-    private val sReceiver = "final receiver".withUnderline
+  class ActorWithProbeCore(verbose: Boolean) extends Actor with ActorLogging with Stash {
+    import ActorWithProbeCore.InitAWP
+
+    private val lPrefix = "[AWP]".withCyan
+    private val lReceiver = "final receiver".withUnderline
+    private val lSender = "sender".withUnderline
+    private val lStash = "[STASHED]".withCyan
 
     def receive: Receive = waiting()
 
     def waiting(): Receive = {
       case InitAWP(ref, probe) =>
-        if (verbose) log.info(s"$prefix InitAWP")
+        if (verbose)
+          log.info(s"$lPrefix InitAWP")
+
         context.become(running(ref, probe))
+        unstashAll()
+
+      case msg =>
+        if (verbose)
+          log.info(s"$lStash ${msg.toString.withGreen} - $lSender ${sender.path}")
+
+        stash()
     }
 
     def running(ref: ActorRef, probe: TestProbe): Receive = {
       case msg =>
         if (verbose)
-          log.info(s"$prefix ${msg.toString.withGreen} - $sSender ${sender.path} $sReceiver ${ref.path}")
+          log.info(s"$lPrefix ${msg.toString.withGreen} - $lSender ${sender.path} $lReceiver ${ref.path}")
 
         probe.ref forward msg
         ref forward msg

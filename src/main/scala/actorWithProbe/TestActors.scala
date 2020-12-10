@@ -47,13 +47,13 @@ object TestActors {
     def props(): Props = Props[PongActor]
   }
 
-  // - - - REPEATED - - -
+  // - - - ACTOR THAT SEND A MESSAGE TO ITSELF - - -
   class SelfActor() extends Actor with ActorLogging with AWP {
     import SelfActor._
 
     def receive: Receive = {
       case msg @ Envelop(_) =>
-        log.info(s"*** $msg $awpSelf")
+        log.info(s"$msg")
 
       case msg =>
         log.info(s"$msg")

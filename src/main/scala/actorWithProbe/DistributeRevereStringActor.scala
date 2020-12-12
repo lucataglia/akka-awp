@@ -1,23 +1,32 @@
 package actorWithProbe
 
-import actorWithProbe.ChildrenActor.Reverse
+import DistributeRevereStringWithRoundRobinActor.Slaves
+import actorWithProbe.SlaveActor.Reverse
 import actorWithProbe.testkit.AWP
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
-import akka.routing.RoundRobinPool
+import akka.routing.{RoundRobinGroup, RoundRobinPool}
 
-class DistributeRevereStringActor(pool: Int) extends Actor with ActorLogging with Stash with AWP {
-  import DistributeRevereStringActor._
+class DistributeRevereStringWithRoundRobinActor(slaves: Slaves) extends Actor with ActorLogging with Stash with AWP {
+  import DistributeRevereStringWithRoundRobinActor._
 
   override def preStart(): Unit = {
-    val router: ActorRef = context.actorOf(RoundRobinPool(pool).props(Props[ChildrenActor]))
-    awpSelf ! Init(router)
+    slaves match {
+      case Pool(pool) =>
+        val router = context.actorOf(RoundRobinPool(pool).props(Props[SlaveActor]))
+        awpSelf ! Init(router, pool)
+
+      case Group(paths) =>
+        val router = context.actorOf(RoundRobinGroup(paths).props())
+        awpSelf ! Init(router, paths.length)
+    }
+
   }
 
   override def receive: Receive = waiting()
 
   def waiting(): Receive = {
-    case Init(router) =>
-      log.info(s"[Init] poolSize: $pool")
+    case Init(router, slaveCount) =>
+      log.info(s"[Init] poolSize: $slaveCount")
 
       context.become(ready(router))
       unstashAll()
@@ -57,23 +66,27 @@ class DistributeRevereStringActor(pool: Int) extends Actor with ActorLogging wit
   override implicit val awpSelf: ActorRef = self
 }
 
-object DistributeRevereStringActor {
-  case class Init(router: ActorRef)
+object DistributeRevereStringWithRoundRobinActor {
+  sealed trait Slaves
+  case class Pool(pool: Int) extends Slaves
+  case class Group(paths: List[String]) extends Slaves
+
+  case class Init(router: ActorRef, slaveCount: Int)
   case class Exec(str: String, part: Int)
   case class Sorted(sorted: String, id: Int)
   case class Start(children: Int)
   case class Result(result: String)
 }
 
-class ChildrenActor() extends Actor {
-  import ChildrenActor._
-  import DistributeRevereStringActor.Sorted
+class SlaveActor() extends Actor {
+  import DistributeRevereStringWithRoundRobinActor.Sorted
+  import SlaveActor._
 
   override def receive: Receive = {
     case Reverse(str, id) => sender ! Sorted(str.reverse, id)
   }
 }
 
-object ChildrenActor {
+object SlaveActor {
   case class Reverse(str: String, id: Int)
 }

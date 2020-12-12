@@ -1,6 +1,7 @@
 package actorWithProbe
 
-import actorWithProbe.DistributeRevereStringActor.{Exec, Result}
+import actorWithProbe.DistributeRevereStringWithRoundRobinActor.{Exec, Group, Pool, Result}
+import actorWithProbe.SlaveActor.Reverse
 import actorWithProbe.testkit.ActorWithProbe
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
@@ -18,13 +19,13 @@ class DistributeRevereStringActorSpec
 
   private val notSoLongString = "We are going to test the algorithm using the ActorWithProbe library"
 
-  "Distribute Reverse String" must {
+  "Distribute Reverse String using routing pool" must {
     "answer with the reversed string" in {
 
       val distributedSorter =
         ActorWithProbe
           .actorOf(ref =>
-                     Props(new DistributeRevereStringActor(12) {
+                     Props(new DistributeRevereStringWithRoundRobinActor(Pool(12)) {
                        override implicit val awpSelf: ActorRef = ref
                      }),
                    "distributedSorter-1",
@@ -39,7 +40,7 @@ class DistributeRevereStringActorSpec
       val distributedSorter =
         ActorWithProbe
           .actorOf(ref =>
-                     Props(new DistributeRevereStringActor(8) {
+                     Props(new DistributeRevereStringWithRoundRobinActor(Pool(8)) {
                        override implicit val awpSelf: ActorRef = ref
                      }),
                    "distributedSorter-2",
@@ -48,6 +49,31 @@ class DistributeRevereStringActorSpec
       distributedSorter ! Exec(notSoLongString, 2)
       distributedSorter.eventuallyReceiveMsgType[Exec]
       distributedSorter.eventuallyReceiveMsgType[Result]
+    }
+  }
+
+  "Distribute Reverse String using routing group" must {
+    "answer with the reversed string" in {
+      val slaves = (0 until 10)
+        .map(i => ActorWithProbe.actorOf(Props[SlaveActor], s"slave_$i", verbose = true))
+
+      val slavesPath = slaves.map(_.path.toString).toList
+
+      val distributedSorter =
+        ActorWithProbe.actorOf(
+          ref =>
+            Props(new DistributeRevereStringWithRoundRobinActor(Group(slavesPath)) {
+              override implicit val awpSelf: ActorRef = ref
+            }),
+          "distributedSorter-3",
+          verbose = true
+        )
+
+      distributedSorter ! Exec(longString, 10)
+
+      slaves.foreach(slave => slave.eventuallyReceiveMsgType[Reverse])
+      distributedSorter eventuallyReceiveMsg Exec(longString, 10)
+      distributedSorter eventuallyReceiveMsg Result(expected)
     }
   }
 }

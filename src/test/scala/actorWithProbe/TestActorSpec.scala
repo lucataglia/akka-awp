@@ -3,11 +3,14 @@ package actorWithProbe
 import actorWithProbe.TestActors.PingActor.Pong
 import actorWithProbe.TestActors.PongActor.Ping
 import actorWithProbe.TestActors.SelfActor.Envelop
-import actorWithProbe.TestActors.{PingActor, PongActor, SelfActor}
+import actorWithProbe.TestActors.TimerActor.Stop
+import actorWithProbe.TestActors.{PingActor, PongActor, SelfActor, TimerActor}
 import actorWithProbe.testkit._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.{MustMatchers, WordSpecLike}
+
+import scala.concurrent.ExecutionContextExecutor
 
 class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with WordSpecLike with MustMatchers {
 
@@ -38,7 +41,7 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
         ActorWithProbe.actorOf(
           ref =>
             Props(new PingActor(pongRef) {
-              override implicit val awpSelf: ActorRef = ref;
+              override implicit val awpSelf: ActorRef = ref
             }),
           "ping-2",
           verbose = false
@@ -72,7 +75,7 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
         ActorWithProbe.actorOf(
           ref =>
             Props(new SelfActor() {
-              override implicit val awpSelf: ActorRef = ref;
+              override implicit val awpSelf: ActorRef = ref
             }),
           "self-3",
           verbose = true
@@ -93,6 +96,32 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
       selfRef ! "Hello Jeff !!"
       selfRef expectMsg "Hello Jeff !!"
       selfRef expectMsg Envelop("Hello Jeff !!")
+    }
+  }
+
+  "An actor that has a periodic timer" must {
+    "receive all the messages since it stopped" in {
+      import scala.concurrent.duration._
+
+      val msg = "Hello Scheduler !!!"
+
+      val schedulerRef =
+        ActorWithProbe.actorOf(
+          ref =>
+            Props(new TimerActor(msg) {
+              override implicit val awpSelf: ActorRef = ref
+            }),
+          "self-5",
+          verbose = true
+        )
+
+      implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+      system.scheduler.scheduleOnce(5 seconds) {
+        schedulerRef ! Stop
+      }
+
+      // schedulerRef eventuallyReceiveMsg msg // This won't work since can't be overridden the self used by Timers
+      schedulerRef.eventuallyReceiveMsg(Stop, 6)
     }
   }
 }

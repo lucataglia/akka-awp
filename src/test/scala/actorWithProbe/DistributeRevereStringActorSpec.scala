@@ -1,6 +1,6 @@
 package actorWithProbe
 
-import actorWithProbe.DistributeRevereStringActor.{Result, Start}
+import actorWithProbe.DistributeRevereStringActor.{Exec, Result}
 import actorWithProbe.testkit.ActorWithProbe
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
@@ -20,32 +20,33 @@ class DistributeRevereStringActorSpec
 
   "Distribute Reverse String" must {
     "answer with the reversed string" in {
-      val children = 12
+
       val distributedSorter =
         ActorWithProbe
           .actorOf(ref =>
-                     Props(new DistributeRevereStringActor(children, longString) {
+                     Props(new DistributeRevereStringActor(12) {
                        override implicit val awpSelf: ActorRef = ref
                      }),
                    "distributedSorter-1",
                    verbose = true)
 
-      distributedSorter eventuallyReceiveMsg Start(children)
+      distributedSorter ! Exec(longString, 10)
+      distributedSorter eventuallyReceiveMsg Exec(longString, 10)
       distributedSorter eventuallyReceiveMsg Result(expected)
     }
 
     "answer with a Result message when the algorithm ends" in {
-      val children = 4
       val distributedSorter =
         ActorWithProbe
           .actorOf(ref =>
-                     Props(new DistributeRevereStringActor(children, notSoLongString) {
+                     Props(new DistributeRevereStringActor(8) {
                        override implicit val awpSelf: ActorRef = ref
                      }),
                    "distributedSorter-2",
                    verbose = true)
 
-      distributedSorter.eventuallyReceiveMsgType[Start]
+      distributedSorter ! Exec(notSoLongString, 2)
+      distributedSorter.eventuallyReceiveMsgType[Exec]
       distributedSorter.eventuallyReceiveMsgType[Result]
     }
   }

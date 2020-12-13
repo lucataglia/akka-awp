@@ -1,6 +1,18 @@
 package actorWithProbe
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Stash}
+import akka.actor.SupervisorStrategy.Stop
+import akka.actor.{
+  Actor,
+  ActorLogging,
+  ActorRef,
+  ActorSystem,
+  OneForOneStrategy,
+  PoisonPill,
+  Props,
+  Stash,
+  SupervisorStrategy,
+  Terminated
+}
 import akka.testkit.TestProbe
 
 import scala.concurrent.duration._
@@ -14,29 +26,30 @@ package object testkit {
 
   // Factory Methods
   object ActorWithProbe {
-    import ActorWithProbeCore.InitAWP
 
     def actorOf(f: ActorRef => Props, name: String, verbose: Boolean)(
         implicit system: ActorSystem
     ): ActorWithProbe = {
       val probe = TestProbe(s"probe-$name")
-      val swp = system.actorOf(ActorWithProbeCore.props(verbose), s"swp-$name")
-      val realActorRef = system.actorOf(f(swp), s"real-$name")
+      val coreRef = system.actorOf(ActorWithProbeCore.props(f, probe, name, verbose), s"awp-$name")
 
-      swp ! InitAWP(realActorRef, probe)
-      ActorWithProbe(swp, probe)
+      ActorWithProbe(coreRef, probe)
     }
 
     def actorOf(props: Props, name: String, verbose: Boolean)(
         implicit system: ActorSystem
     ): ActorWithProbe = {
       val probe = TestProbe(s"probe-$name")
-      val awp = system.actorOf(ActorWithProbeCore.props(verbose), s"awp-$name")
-      val realActorRef = system.actorOf(props, s"real-$name")
+      val coreRef = system.actorOf(ActorWithProbeCore.props(_ => props, probe, name, verbose), s"awp-$name")
 
-      awp ! InitAWP(realActorRef, probe)
-      ActorWithProbe(awp, probe)
+      ActorWithProbe(coreRef, probe)
     }
+  }
+
+  // Actor Enhancer
+  trait AWP {
+    this: Actor =>
+    implicit val awpSelf: ActorRef
   }
 
   // API
@@ -185,17 +198,39 @@ package object testkit {
   }
 
   // Core
-  class ActorWithProbeCore(verbose: Boolean) extends Actor with ActorLogging with Stash {
+  private class ActorWithProbeCore(f: ActorRef => Props, probe: TestProbe, name: String, verbose: Boolean)
+      extends Actor
+      with ActorLogging
+      with Stash {
     import ActorWithProbeCore.InitAWP
 
     private val lPrefix = "[AWP]".withCyan
     private val lReceiver = "final receiver".withUnderline
     private val lSender = "sender".withUnderline
     private val lStash = "[STASHED]".withCyan
+    private val lSupervisor = "[SUPERVISOR]".withCyan
+    private val lTerminated = "[TERMINATED]".withCyan
+
+    override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
+      case msg =>
+        log.info(s"$lSupervisor received $msg")
+        SupervisorStrategy.defaultDecider(msg)
+    }
+
+    override def preStart(): Unit = {
+      val realActorRef = context.actorOf(f(self), s"real-$name")
+      context.watch(realActorRef)
+
+      self ! InitAWP(realActorRef, probe)
+    }
 
     def receive: Receive = waiting()
 
     def waiting(): Receive = {
+      case Terminated(ref) =>
+        log.info(s"$lTerminated real actor ref ${ref.path} is terminated")
+        context.stop(self)
+
       case InitAWP(ref, probe) =>
         if (verbose)
           log.info(s"$lPrefix InitAWP")
@@ -211,6 +246,10 @@ package object testkit {
     }
 
     def running(ref: ActorRef, probe: TestProbe): Receive = {
+      case Terminated(ref) =>
+        log.info(s"$lTerminated real actor ref ${ref.path} is terminated")
+        context.stop(self)
+
       case msg =>
         if (verbose)
           log.info(s"$lPrefix ${msg.toString.withGreen} - $lSender ${sender.path} $lReceiver ${ref.path}")
@@ -220,16 +259,12 @@ package object testkit {
     }
   }
 
-  object ActorWithProbeCore {
+  private object ActorWithProbeCore {
 
     case class InitAWP(actorRef: ActorRef, probe: TestProbe)
 
-    def props(verbose: Boolean): Props = Props(new ActorWithProbeCore(verbose))
-  }
-
-  trait AWP {
-    this: Actor =>
-    implicit val awpSelf: ActorRef
+    def props(f: ActorRef => Props, probe: TestProbe, name: String, verbose: Boolean): Props =
+      Props(new ActorWithProbeCore(f, probe, name, verbose))
   }
 
   private implicit class StringWithColors(str: String) {

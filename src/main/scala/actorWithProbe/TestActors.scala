@@ -1,9 +1,7 @@
 package actorWithProbe
 
 import actorWithProbe.testkit.AWP
-import akka.actor.{Actor, ActorLogging, ActorRef, Props, Timers}
-
-import scala.concurrent.ExecutionContextExecutor
+import akka.actor.{Actor, ActorLogging, ActorRef, Kill, Props, Timers}
 
 object TestActors {
   // - - - PING PONG - - -
@@ -29,8 +27,8 @@ object TestActors {
   }
 
   class PongActor() extends Actor with ActorLogging with AWP {
-    import PongActor._
     import PingActor._
+    import PongActor._
 
     def receive: Receive = {
       case msg @ Ping =>
@@ -70,20 +68,21 @@ object TestActors {
   }
 
   class TimerActor(msg: Any) extends Actor with ActorLogging with Timers with AWP {
-    import TimerActor.{TimerKey, Stop}
+    import TimerActor.{Start, Stop, TimerKey}
+
     import scala.concurrent.duration._
 
-    override def preStart(): Unit = {
-      timers.startTimerAtFixedRate(TimerKey, msg, 1 second)
-    }
-
     override def receive: Receive = {
-      case msg =>
-        log.info(s"$msg")
+      case Start =>
+        log.info(s"[Start]")
+        timers.startTimerAtFixedRate(TimerKey, msg, 1 second)
 
       case Stop =>
+        log.info(s"[Stop]")
+        context.stop(self)
+
+      case msg =>
         log.info(s"$msg")
-        context.stop(awpSelf)
     }
 
     override implicit val awpSelf: ActorRef = self
@@ -91,6 +90,7 @@ object TestActors {
 
   object TimerActor {
     case object TimerKey
+    case object Start
     case object Stop
   }
 

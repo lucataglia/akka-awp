@@ -3,16 +3,22 @@ package actorWithProbe
 import actorWithProbe.TestActors.PingActor.Pong
 import actorWithProbe.TestActors.PongActor.Ping
 import actorWithProbe.TestActors.SelfActor.Envelop
-import actorWithProbe.TestActors.TimerActor.Stop
+import actorWithProbe.TestActors.TimerActor.{Start, Stop}
 import actorWithProbe.TestActors.{PingActor, PongActor, SelfActor, TimerActor}
 import actorWithProbe.testkit._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.{MustMatchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
 
-import scala.concurrent.ExecutionContextExecutor
+class TestActorSpec
+    extends TestKit(ActorSystem("awp"))
+    with ImplicitSender
+    with WordSpecLike
+    with MustMatchers
+    with BeforeAndAfterAll {
 
-class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with WordSpecLike with MustMatchers {
+  override protected def afterAll(): Unit =
+    TestKit.shutdownActorSystem(system)
 
   "A Ping Pong network" must {
     "send a Ping message to Pong Actor " in {
@@ -102,10 +108,11 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
   "An actor that has a periodic timer" must {
     "receive all the messages since it stopped" in {
       import scala.concurrent.duration._
+      import system.dispatcher
 
       val msg = "Hello Scheduler !!!"
 
-      val schedulerRef =
+      val timerRef =
         ActorWithProbe.actorOf(
           ref =>
             Props(new TimerActor(msg) {
@@ -115,13 +122,14 @@ class TestActorSpec extends TestKit(ActorSystem("awp")) with ImplicitSender with
           verbose = true
         )
 
-      implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+      timerRef ! Start
       system.scheduler.scheduleOnce(5 seconds) {
-        schedulerRef ! Stop
+        timerRef ! Stop
       }
 
+      timerRef eventuallyReceiveMsg Start
       // schedulerRef eventuallyReceiveMsg msg // This won't work since can't be overridden the self used by Timers
-      schedulerRef.eventuallyReceiveMsg(Stop, 6)
+      timerRef.eventuallyReceiveMsg(Stop, 6)
     }
   }
 }

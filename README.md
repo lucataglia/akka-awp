@@ -2,6 +2,12 @@
 A lightweight testing library that works along with [akka-testkit][akka-testkit]
 to make integration tests on complex actors network easier.
 
+## Table of contents
+* [Main goal](#main-goal)
+* [Examples](#examples)
+* [FAQ](#faq)
+* [Getting started](#getting-started)
+
 ## Main goal
 Akka-awp can help in testing complex and less complex applications made by Akka actors. 
 Create an actor using akka-awp API makes invoking new test methods available on the
@@ -59,14 +65,14 @@ Given that behavior, testing this application can be done as following:
 ```
 To see the source code of this test please take a look at the [test folder][akka-awp-tests].
 
-## Diving down in technical details
+## FAQ
 
-### How is possible invoke test method on real actor
+### How is possible invoke test method on real actor ?
 Akka-awp is able to invoke test methods on real actors because it handles
 under the hood a hidden TestProbe that receives all the messages the
 actor get.
 
-### How is possible test responses (e.g. sender() ! Msg) 
+### How is possible test responses (e.g. sender() ! Msg) ? 
 When an actor send a message the the `!` method, there is an `implicit val varName: ActorRef = ???` 
 that is taken as sender, usually the self val inherited from the Actor trait.
 This value need to be redefined to let akka-awp works properly. Each actor
@@ -78,8 +84,8 @@ This will makes the awpSelf ActorRef as implicit sender.
 The implicit has to be redefined into the user defined actor code in order
 to avoid conflict in implicit resolution. 
 
-### How is possible test auto messages (e.g. self ! Msg)
-Is not possible. Using `self` directly prevents akka-awp to intercept the
+### How is possible test auto messages (e.g. self ! Msg) ?
+It isn't. Using `self` directly prevents akka-awp to intercept the
 messages. If the needs is to test also the auto-messages, the ActorRef used must me awpSelf:
 e.g. `awpSelf ! Msg`. 
 
@@ -90,7 +96,26 @@ should not be tested.
 In this section I'll list all the corner case I found.
 * Also using awpSelf as explained before do not makes available to intectept the messages that 
 come from [timers][akka-timers] (e.g. `timers.startTimerAtFixedRate(Key, Msg, 1 second)`. These
-messages are sent using the self that comes from the Actor trait.
+messages are sent using the `self` ActorRef that comes from the Actor trait.
+
+## Getting Started
+Akka-awp makes available all the methods from the [akka-testkit][akka-testkit] library
+but also expose some new methods. Those methods are utility methods build on top of
+akka-testkit and allow to easily test if an actor will receive a message before
+a timeout expires. This utility was written with the goal to expose a declarative
+programming approach.
+```
+pingRef ! "ping" thenWaitFor pongRef receiving Ping andThenWaitMeReceiving Pong
+``` 
+The line above is actually the follwing:
+```
+pingRef.!("ping").thenWaitFor(pongRef).receiving(Ping).andThenWaitMeReceiving(Pong)
+``` 
+Akka-awp redefine the `!` method to makes available these test API.
+* **thanWaitFor**: tells which actor we are going to test next
+* **andThenWaitFor**: the same as thanWaitFor.
+* **thenWaitMeReceiving**: TODO) 
+ 
 
 [akka-testkit]:https://doc.akka.io/docs/akka/current/testing.html
 [akka-awp-tests]: https://github.com/lucataglia/akka-awp/tree/main/src/test/scala/actorWithProbe

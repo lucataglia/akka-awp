@@ -21,7 +21,7 @@ actor eventuallyReceiveMsg Output
 ## Examples
 To see more examples please take a look at the [test folder][akka-awp-tests].
 
-###Distributed reverse string algorithm
+### Distributed reverse string algorithm
 Given a long string the actors app will return the string reverted. Our system is
 organized as follow:
 * A master actor when start spawn N slaves. The number is set at creation time.
@@ -29,10 +29,13 @@ organized as follow:
 number of slaves he had to generate.
 * Using a Round Robin algorithm the master send to each slave a slice of the whole
 string. This value is the one the slave has to manage. 
+
 ![](img/akka-awp-diagram-example.svg "akka-awp-dia")
+
 * The slave answer the master.
 * The master merge together all the slaves responses sending to itself the final
 result through a Result message.
+
 ![](img/akka-awp-diagram-example-part2.svg "akka-awp-dia")
 
 Given that behavior, testing this application can be done as follow

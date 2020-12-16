@@ -57,8 +57,8 @@ Given that behavior, testing this application can be done as follow
       distributedSorter eventuallyReceiveMsg Result(expected)
     }
 ```
-
-##Diving down in technical details
+To see the source code of this example please take a look at the [test folder][akka-awp-tests].
+## Diving down in technical details
 
 [akka-testkit]:https://doc.akka.io/docs/akka/current/testing.html
 [akka-awp-tests]: https://github.com/lucataglia/akka-awp/tree/main/src/test/scala/actorWithProbe

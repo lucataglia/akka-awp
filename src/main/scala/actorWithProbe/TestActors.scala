@@ -48,22 +48,23 @@ object TestActors {
   }
 
   // - - - ACTOR THAT SEND A MESSAGE TO ITSELF - - -
-  class SelfActor() extends Actor with ActorLogging with AWP {
-    import SelfActor._
+  class SillyActor(answer: String) extends Actor with ActorLogging with AWP {
+    import SillyActor._
 
     def receive: Receive = {
       case msg @ Envelop(_) =>
         log.info(s"$msg")
+        sender() ! answer
 
       case msg =>
         log.info(s"$msg")
-        awpSelf ! Envelop(msg)
+        awpSelf forward Envelop(msg)
     }
 
     override implicit val awpSelf: ActorRef = self
   }
 
-  object SelfActor {
+  object SillyActor {
     case class Envelop(msg: Any)
   }
 

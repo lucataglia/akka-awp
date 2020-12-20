@@ -25,24 +25,30 @@ actor eventuallyReceiveMsg Output
 ```
  
 ## Examples
+The aim of this section is to give a quick overview about how it looks an akka-awp test.
+The first example has been written using low-level API while the second one has been written
+using the high-level API. Both the examples could be re-written using the other approach. 
+
 To see more test examples please take a look at the [test folder][akka-awp-tests].
 
-### Distributed reverse string algorithm
-Given a long string the actors app will return the string reverted. Our system is
+### Distributed reverse string (low-level API)
+This example will show you how akka-awp allow testing a complex system.
+
+Given a long string the algorithm returns the string reverted. The actors are
 organized as follow:
-* A master actor when start spawn N slaves. The number is set at creation time.
-* When the master receive the Exec message, he get the string to reverse and the
-number of slaves he had to generate.
+* A master actor spawn N slaves. The number of slaves is set at creation time.
+* The master receive the the string to reverse through an Exec message along with
+the number of slaves he had to generate.
 * Using a [Round Robin][akka-round-robin] algorithm the master send to each slave a slice of the whole
 string. This value is the one the slave has to manage. 
 
-![](img/akka-awp-diagram-example.svg "akka-awp-dia")
+![](img/akka-awp-diagram-example.svg "akka-awp-distributed-dia")
 
 * Each slave answer the master.
 * The master merge together all the slaves responses sending to itself the final
 result through a Result message.
 
-![](img/akka-awp-diagram-example-part2.svg "akka-awp-dia")
+![](img/akka-awp-diagram-example-part2.svg "akka-awp-distributed-part-2-dia")
 
 Given that behavior, testing this application can be done as following:
 ```
@@ -65,6 +71,39 @@ Given that behavior, testing this application can be done as following:
 ```
 To see the source code of this test please take a look at the [test folder][akka-awp-tests].
 
+### Silly Actor (high-level API)
+This example will show you how the high level API of akka-awp allow testing also
+the mailbox of the original sender.
+
+
+![](img/akka-awp-diagram-silly-actor.svg "akka-awp-silly-actor-dia")
+
+Let's describe step by step the flow of this execution:
+1. The testActor from the ImplicitSender trait send a String message to the SillyActor.
+2. The SillyActor send to itself the received String message wrapped into an Envelop case class
+3. The SillyActor, once received the Envelop, answer the original sender (aka the testActor) with an
+pre-defined answer
+
+```
+"An actor that send to itself a message" must {
+    "be able to test if he received it" in {
+     
+      val sillyRef =
+        ActorWithProbe.actorOf(
+          ref =>
+            Props(new SillyActor("Got the message") {
+              override implicit val awpSelf: ActorRef = ref
+            }),
+          "self-3",
+          verbose = true
+        )
+
+      sillyRef ! "Hello akka-awp !!" thenWaitFor sillyRef receiving Envelop("Hello akka-awp") andThenWaitMeReceiving "Got the message"
+    }
+  }
+```
+
+To see the source code of this test please take a look at the [test folder][akka-awp-tests].
 ## FAQ
 
 ### How is possible invoke test method on real actor ?
@@ -98,7 +137,7 @@ In this section I'll list all the corner case I found.
 come from [timers][akka-timers] (e.g. `timers.startTimerAtFixedRate(Key, Msg, 1 second)`. These
 messages are sent using the `self` ActorRef that comes from the Actor trait.
 
-## Getting Started
+## Getting Started (TODO !!!)
 Akka-awp makes available all the methods from the [akka-testkit][akka-testkit] library
 but also expose some new methods. Those methods are utility methods build on top of
 akka-testkit and allow to easily test if an actor will receive a message before

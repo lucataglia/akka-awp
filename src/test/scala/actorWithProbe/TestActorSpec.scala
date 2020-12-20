@@ -2,9 +2,9 @@ package actorWithProbe
 
 import actorWithProbe.TestActors.PingActor.Pong
 import actorWithProbe.TestActors.PongActor.Ping
-import actorWithProbe.TestActors.SelfActor.Envelop
+import actorWithProbe.TestActors.SillyActor.Envelop
 import actorWithProbe.TestActors.TimerActor.{Start, Stop}
-import actorWithProbe.TestActors.{PingActor, PongActor, SelfActor, TimerActor}
+import actorWithProbe.TestActors.{PingActor, PongActor, SillyActor, TimerActor}
 import actorWithProbe.testkit._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
@@ -63,8 +63,8 @@ class TestActorSpec
       pingRef.eventuallyReceiveMsgType[Pong.type]
 
       // High level API
-      pingRef ! "ping" thenWaitFor pongRef receiving Ping andThenWaitMeReceiving Pong
-      pingRef.!("ping").thenWaitFor(pongRef).receivingType[Ping.type]().andThenWaitMeReceivingType[Pong.type]
+      pingRef ! "ping" thenWaitFor pongRef receiving Ping andThenWaitFor pingRef receiving Pong
+      pingRef.!("ping").thenWaitFor(pongRef).receivingType[Ping.type]().andThenWaitFor(pingRef).receivingType[Pong.type]
 
       // TestProbe API
       pingRef ! "ping"
@@ -76,11 +76,11 @@ class TestActorSpec
 
   "An actor that send to itself a message" must {
     "be able to test if he received it" in {
-
-      val selfRef =
+      val answer = "Got the message"
+      val sillyRef =
         ActorWithProbe.actorOf(
           ref =>
-            Props(new SelfActor() {
+            Props(new SillyActor(answer) {
               override implicit val awpSelf: ActorRef = ref
             }),
           "self-3",
@@ -88,27 +88,28 @@ class TestActorSpec
         )
 
       // Low level API
-      selfRef ! "Hello Jeff !!"
-      selfRef eventuallyReceiveMsg Envelop("Hello Jeff !!")
+      sillyRef ! "Hello Jeff !!"
+      sillyRef eventuallyReceiveMsg Envelop("Hello Jeff !!")
 
-      selfRef ! "Hello Jeff !!"
-      selfRef.eventuallyReceiveMsgType[Envelop]
+      sillyRef ! "Hello Jeff !!"
+      sillyRef.eventuallyReceiveMsgType[Envelop]
 
       // High level API
-      selfRef ! "Hello Jeff !!" thenWaitMeReceiving Envelop("Hello Jeff !!")
-      selfRef.!("Hello Jeff !!").thenWaitMeReceivingType[Envelop]
+      sillyRef ! "Hello Jeff !!" thenWaitFor sillyRef receiving Envelop("Hello Jeff !!") andThenWaitMeReceiving answer
+      sillyRef.!("Hello Jeff !!").thenWaitFor(sillyRef).receivingType[Envelop].andThenWaitMeReceivingType[String]
 
       // TestProbe API
-      selfRef ! "Hello Jeff !!"
-      selfRef expectMsg "Hello Jeff !!"
-      selfRef expectMsg Envelop("Hello Jeff !!")
+      sillyRef ! "Hello Jeff !!"
+      sillyRef expectMsg "Hello Jeff !!"
+      sillyRef expectMsg Envelop("Hello Jeff !!")
     }
   }
 
   "An actor that has a periodic timer" must {
     "receive all the messages since it stopped" in {
-      import scala.concurrent.duration._
       import system.dispatcher
+
+      import scala.concurrent.duration._
 
       val msg = "Hello Scheduler !!!"
 

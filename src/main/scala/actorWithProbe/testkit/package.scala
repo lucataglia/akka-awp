@@ -1,13 +1,11 @@
 package actorWithProbe
 
-import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{
   Actor,
   ActorLogging,
   ActorRef,
   ActorSystem,
   OneForOneStrategy,
-  PoisonPill,
   Props,
   Stash,
   SupervisorStrategy,
@@ -27,20 +25,48 @@ package object testkit {
   // Factory Methods
   object ActorWithProbe {
 
-    def actorOf(f: ActorRef => Props, name: String, verbose: Boolean)(
+    def actorOf(f: ActorRef => Props, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
+      privateActorOf(FromProps(f), None, verbose)
+
+    def actorOf(f: ActorRef => Props, name: String, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
+      privateActorOf(FromProps(f), Some(name), verbose)
+
+    def actorOf(props: Props, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
+      privateActorOf(FromProps(_ => props), None, verbose)
+
+    def actorOf(props: Props, name: String, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
+      privateActorOf(FromProps(_ => props), Some(name), verbose)
+
+    def actorOf(actorRef: ActorRef, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
+      privateActorOf(FromRef(actorRef), None, verbose)
+
+    def actorOf(actorRef: ActorRef, name: String, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
+      privateActorOf(FromRef(actorRef), Some(name), verbose)
+
+//    @deprecated
+//    def actorOf(props: Props, name: String, verbose: Boolean)(
+//        implicit system: ActorSystem
+//    ): ActorWithProbe = {
+//      val probe = TestProbe(s"probe-$name")
+//      val coreRef = system.actorOf(ActorWithProbeCore.props(FromProps(_ => props), probe, name, verbose), s"awp-$name")
+//
+//      ActorWithProbe(coreRef, probe)
+//    }
+
+    private def privateActorOf(realActor: RealActor, maybeName: Option[String], verbose: Boolean)(
         implicit system: ActorSystem
     ): ActorWithProbe = {
-      val probe = TestProbe(s"probe-$name")
-      val coreRef = system.actorOf(ActorWithProbeCore.props(f, probe, name, verbose), s"awp-$name")
+      val (coreRef, probe) = maybeName match {
+        case Some(name) =>
+          val probe = TestProbe(s"probe-$name")
+          val coreRef = system.actorOf(ActorWithProbeCore.props(realActor, probe, maybeName, verbose), s"awp-$name")
+          (coreRef, probe)
 
-      ActorWithProbe(coreRef, probe)
-    }
-
-    def actorOf(props: Props, name: String, verbose: Boolean)(
-        implicit system: ActorSystem
-    ): ActorWithProbe = {
-      val probe = TestProbe(s"probe-$name")
-      val coreRef = system.actorOf(ActorWithProbeCore.props(_ => props, probe, name, verbose), s"awp-$name")
+        case None =>
+          val probe = TestProbe()
+          val coreRef = system.actorOf(ActorWithProbeCore.props(realActor, probe, maybeName, verbose))
+          (coreRef, probe)
+      }
 
       ActorWithProbe(coreRef, probe)
     }
@@ -54,14 +80,14 @@ package object testkit {
 
   // API
   case class ActorWithProbe(ref: ActorRef, probe: TestProbe) {
-    private val awwf: ActorWithWaitingFor = ActorWithWaitingFor(this)
-
-    def !(msg: Any)(implicit sender: ActorRef): ActorWithWaitingFor =
+    def !(msg: Any)(implicit sender: ActorRef, system: ActorSystem): ActorWithWaitingFor =
       tell(msg, sender)
 
-    def tell(msg: Any, sender: ActorRef): ActorWithWaitingFor = {
-      ref tell (msg, sender)
-      awwf
+    def tell(msg: Any, sender: ActorRef)(implicit system: ActorSystem): ActorWithWaitingFor = {
+      val awp = ActorWithProbe.actorOf(sender, verbose = false)
+      ref tell (msg, awp)
+
+      ActorWithWaitingFor(awp)
     }
   }
 
@@ -85,7 +111,7 @@ package object testkit {
     def thenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       thenWaitMeReceivingType()
 
-    def thenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+    private def thenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
         implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receivingType(maxSeconds, hint)
       this
@@ -94,7 +120,7 @@ package object testkit {
     def andThenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       andThenWaitMeReceivingType[T]()
 
-    def andThenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+    private def andThenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
         implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receivingType[T](maxSeconds, hint)
       this
@@ -198,7 +224,10 @@ package object testkit {
   }
 
   // Core
-  private class ActorWithProbeCore(f: ActorRef => Props, probe: TestProbe, name: String, verbose: Boolean)
+  protected sealed trait RealActor
+  protected case class FromProps(f: ActorRef => Props) extends RealActor
+  protected case class FromRef(actorRef: ActorRef) extends RealActor
+  private class ActorWithProbeCore(realActor: RealActor, probe: TestProbe, maybeName: Option[String], verbose: Boolean)
       extends Actor
       with ActorLogging
       with Stash {
@@ -218,7 +247,15 @@ package object testkit {
     }
 
     override def preStart(): Unit = {
-      val realActorRef = context.actorOf(f(self), s"real-$name")
+      val realActorRef = realActor match {
+        case FromProps(f) =>
+          maybeName match {
+            case Some(name) => context.actorOf(f(self), s"real-$name")
+            case None       => context.actorOf(f(self))
+          }
+        case FromRef(ref) => ref
+      }
+
       context.watch(realActorRef)
 
       self ! InitAWP(realActorRef, probe)
@@ -263,8 +300,8 @@ package object testkit {
 
     case class InitAWP(actorRef: ActorRef, probe: TestProbe)
 
-    def props(f: ActorRef => Props, probe: TestProbe, name: String, verbose: Boolean): Props =
-      Props(new ActorWithProbeCore(f, probe, name, verbose))
+    def props(realActor: RealActor, probe: TestProbe, maybeName: Option[String], verbose: Boolean): Props =
+      Props(new ActorWithProbeCore(realActor, probe, maybeName, verbose))
   }
 
   private implicit class StringWithColors(str: String) {

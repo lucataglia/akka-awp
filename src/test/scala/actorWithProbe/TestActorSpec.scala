@@ -76,32 +76,31 @@ class TestActorSpec
 
   "An actor that send to itself a message" must {
     "be able to test if he received it" in {
-      val answer = "Got the message"
+
       val sillyRef =
         ActorWithProbe.actorOf(
           ref =>
-            Props(new SillyActor(answer) {
+            Props(new SillyActor("Got the message") {
               override implicit val awpSelf: ActorRef = ref
             }),
-          "self-3",
           verbose = true
         )
 
       // Low level API
-      sillyRef ! "Hello Jeff !!"
-      sillyRef eventuallyReceiveMsg Envelop("Hello Jeff !!")
+      sillyRef ! "Hello akka-awp"
+      sillyRef eventuallyReceiveMsg Envelop("Hello akka-awp")
 
-      sillyRef ! "Hello Jeff !!"
+      sillyRef ! "Hello akka-awp"
       sillyRef.eventuallyReceiveMsgType[Envelop]
 
       // High level API
-      sillyRef ! "Hello Jeff !!" thenWaitFor sillyRef receiving Envelop("Hello Jeff !!") andThenWaitMeReceiving answer
-      sillyRef.!("Hello Jeff !!").thenWaitFor(sillyRef).receivingType[Envelop].andThenWaitMeReceivingType[String]
+      sillyRef ! "Hello akka-awp" thenWaitFor sillyRef receiving Envelop("Hello akka-awp") andThenWaitMeReceiving "Got the message"
+      sillyRef.!("Hello akka-awp").thenWaitFor(sillyRef).receivingType[Envelop].andThenWaitMeReceivingType[String]
 
       // TestProbe API
-      sillyRef ! "Hello Jeff !!"
-      sillyRef expectMsg "Hello Jeff !!"
-      sillyRef expectMsg Envelop("Hello Jeff !!")
+      sillyRef ! "Hello akka-awp"
+      sillyRef expectMsg "Hello akka-awp"
+      sillyRef expectMsg Envelop("Hello akka-awp")
     }
   }
 

@@ -61,7 +61,6 @@ Given that behavior, testing this application can be done as following:
                      Props(new DistributeRevereStringWithRoundRobinActor(Pool(12)) {
                        override implicit val awpSelf: ActorRef = ref
                      }),
-                   "distributedSorter-1",
                    verbose = true)
 
       distributedSorter ! Exec(longString, 10)
@@ -94,11 +93,10 @@ pre-defined answer
             Props(new SillyActor("Got the message") {
               override implicit val awpSelf: ActorRef = ref
             }),
-          "self-3",
           verbose = true
         )
 
-      sillyRef ! "Hello akka-awp !!" thenWaitFor sillyRef receiving Envelop("Hello akka-awp") andThenWaitMeReceiving "Got the message"
+      sillyRef ! "Hello akka-awp" thenWaitFor sillyRef receiving Envelop("Hello akka-awp") andThenWaitMeReceiving "Got the message"
     }
   }
 ```

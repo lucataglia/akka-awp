@@ -22,8 +22,8 @@ class TestActorSpec
 
   "A Ping Pong network" must {
     "send a Ping message to Pong Actor " in {
-      val pongRef = ActorWithProbe.actorOf(PongActor.props(), "pong-1", verbose = false)
-      val pingRef = ActorWithProbe.actorOf(PingActor.props(pongRef), "ping-1", verbose = false)
+      val pongRef = ActorWithProbe.actorOf(Props[PongActor]).withName("pong-1").build()
+      val pingRef = ActorWithProbe.actorOf(PingActor.props(pongRef)).withName("ping-1").build()
 
       // Low level API
       pingRef ! "ping"
@@ -42,16 +42,17 @@ class TestActorSpec
     }
 
     "send a Ping message and then have a Pong answer" in {
-      val pongRef = ActorWithProbe.actorOf(PongActor.props(), "pong-2", verbose = false)
+      val pongRef = ActorWithProbe.actorOf(Props[PongActor]).withName("pong-2").build()
       val pingRef =
-        ActorWithProbe.actorOf(
-          ref =>
-            Props(new PingActor(pongRef) {
-              override implicit val awpSelf: ActorRef = ref
-            }),
-          "ping-2",
-          verbose = false
-        )
+        ActorWithProbe
+          .actorOf(
+            ref =>
+              Props(new PingActor(pongRef) {
+                override implicit val awpSelf: ActorRef = ref
+              })
+          )
+          .withName("ping-2")
+          .build()
 
       // Low level API
       pingRef ! "ping"
@@ -78,13 +79,15 @@ class TestActorSpec
     "be able to test if he received it" in {
 
       val sillyRef =
-        ActorWithProbe.actorOf(
-          ref =>
-            Props(new SillyActor("Got the message") {
-              override implicit val awpSelf: ActorRef = ref
-            }),
-          verbose = true
-        )
+        ActorWithProbe
+          .actorOf(
+            ref =>
+              Props(new SillyActor("Got the message") {
+                override implicit val awpSelf: ActorRef = ref
+              })
+          )
+          .withName("silly")
+          .build()
 
       // Low level API
       sillyRef ! "Hello akka-awp"
@@ -113,14 +116,15 @@ class TestActorSpec
       val msg = "Hello Scheduler !!!"
 
       val timerRef =
-        ActorWithProbe.actorOf(
-          ref =>
-            Props(new TimerActor(msg) {
-              override implicit val awpSelf: ActorRef = ref
-            }),
-          "self-5",
-          verbose = true
-        )
+        ActorWithProbe
+          .actorOf(
+            ref =>
+              Props(new TimerActor(msg) {
+                override implicit val awpSelf: ActorRef = ref
+              })
+          )
+          .withName("timer")
+          .build()
 
       timerRef ! Start
       system.scheduler.scheduleOnce(5 seconds) {

@@ -25,33 +25,25 @@ package object testkit {
   // Factory Methods
   object ActorWithProbe {
 
-    def actorOf(f: ActorRef => Props, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
-      privateActorOf(FromProps(f), None, verbose)
+    class ActorWithProbeBuilder(realActor: RealActor, maybeName: Option[String] = None, verbose: Boolean = true) {
+      def withoutVerbose(): ActorWithProbeBuilder =
+        new ActorWithProbeBuilder(realActor, maybeName, false)
 
-    def actorOf(f: ActorRef => Props, name: String, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
-      privateActorOf(FromProps(f), Some(name), verbose)
+      def withName(name: String): ActorWithProbeBuilder =
+        new ActorWithProbeBuilder(realActor, Some(name), verbose)
 
-    def actorOf(props: Props, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
-      privateActorOf(FromProps(_ => props), None, verbose)
+      def build()(implicit system: ActorSystem): ActorWithProbe =
+        privateActorOf(realActor, maybeName, verbose)
+    }
 
-    def actorOf(props: Props, name: String, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
-      privateActorOf(FromProps(_ => props), Some(name), verbose)
+    def actorOf(f: ActorRef => Props)(implicit system: ActorSystem): ActorWithProbeBuilder =
+      new ActorWithProbeBuilder(FromProps(f))
 
-    def actorOf(actorRef: ActorRef, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
-      privateActorOf(FromRef(actorRef), None, verbose)
+    def actorOf(props: Props)(implicit system: ActorSystem): ActorWithProbeBuilder =
+      new ActorWithProbeBuilder(FromProps(_ => props))
 
-    def actorOf(actorRef: ActorRef, name: String, verbose: Boolean)(implicit system: ActorSystem): ActorWithProbe =
-      privateActorOf(FromRef(actorRef), Some(name), verbose)
-
-//    @deprecated
-//    def actorOf(props: Props, name: String, verbose: Boolean)(
-//        implicit system: ActorSystem
-//    ): ActorWithProbe = {
-//      val probe = TestProbe(s"probe-$name")
-//      val coreRef = system.actorOf(ActorWithProbeCore.props(FromProps(_ => props), probe, name, verbose), s"awp-$name")
-//
-//      ActorWithProbe(coreRef, probe)
-//    }
+    def actorOf(actorRef: ActorRef)(implicit system: ActorSystem): ActorWithProbeBuilder =
+      new ActorWithProbeBuilder(FromRef(actorRef))
 
     private def privateActorOf(realActor: RealActor, maybeName: Option[String], verbose: Boolean)(
         implicit system: ActorSystem
@@ -84,7 +76,7 @@ package object testkit {
       tell(msg, sender)
 
     def tell(msg: Any, sender: ActorRef)(implicit system: ActorSystem): ActorWithWaitingFor = {
-      val awp = ActorWithProbe.actorOf(sender, verbose = false)
+      val awp = ActorWithProbe.actorOf(sender).build()
       ref tell (msg, awp)
 
       ActorWithWaitingFor(awp)
@@ -111,7 +103,7 @@ package object testkit {
     def thenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       thenWaitMeReceivingType()
 
-    private def thenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+    def thenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
         implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receivingType(maxSeconds, hint)
       this
@@ -120,7 +112,7 @@ package object testkit {
     def andThenWaitMeReceivingType[T](implicit msgType: ClassTag[T]): ActorWithWaitingFor =
       andThenWaitMeReceivingType[T]()
 
-    private def andThenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
+    def andThenWaitMeReceivingType[T](maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT)(
         implicit msgType: ClassTag[T]): ActorWithWaitingFor = {
       ActorWithReceiving(me, this).receivingType[T](maxSeconds, hint)
       this

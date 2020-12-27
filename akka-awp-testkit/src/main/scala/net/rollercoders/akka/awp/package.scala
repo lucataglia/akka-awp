@@ -1,4 +1,4 @@
-package actorWithProbe
+package net.rollercoders.akka
 
 import akka.actor.{
   Actor,
@@ -17,15 +17,15 @@ import scala.concurrent.duration._
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
-package object testkit {
+package object awp {
 
   private val DEFAULT_SECONDS = 5
   private val DEFAULT_HINT = ""
 
-  // Factory Methods
   object ActorWithProbe {
-
-    class ActorWithProbeBuilder(realActor: RealActor, maybeName: Option[String] = None, verbose: Boolean = true) {
+    protected class ActorWithProbeBuilder(realActor: RealActor,
+                                          maybeName: Option[String] = None,
+                                          verbose: Boolean = true) {
       def withoutVerbose(): ActorWithProbeBuilder =
         new ActorWithProbeBuilder(realActor, maybeName, false)
 
@@ -36,6 +36,7 @@ package object testkit {
         privateActorOf(realActor, maybeName, verbose)
     }
 
+    // Factory Methods
     def actorOf(f: ActorRef => Props)(implicit system: ActorSystem): ActorWithProbeBuilder =
       new ActorWithProbeBuilder(FromProps(f))
 
@@ -84,7 +85,7 @@ package object testkit {
   }
 
   // TestKit Enhancer (declarative programming)
-  case class ActorWithWaitingFor(me: ActorWithProbe) {
+  protected case class ActorWithWaitingFor(me: ActorWithProbe) {
     // Me
     def thenWaitMeReceiving(semaphoreMsg: Any,
                             maxSeconds: Int = DEFAULT_SECONDS,
@@ -136,7 +137,7 @@ package object testkit {
       ActorWithAllReceiving(awpReceivers, this)
   }
 
-  case class ActorWithReceiving(awpReceiver: ActorWithProbe, awwf: ActorWithWaitingFor) {
+  protected case class ActorWithReceiving(awpReceiver: ActorWithProbe, awwf: ActorWithWaitingFor) {
     def receiving(semaphoreMsg: Any,
                   maxSeconds: Int = DEFAULT_SECONDS,
                   hint: String = DEFAULT_HINT): ActorWithWaitingFor = {
@@ -154,7 +155,7 @@ package object testkit {
     }
   }
 
-  case class ActorWithAllReceiving(awpReceivers: List[ActorWithProbe], awwf: ActorWithWaitingFor) {
+  protected case class ActorWithAllReceiving(awpReceivers: List[ActorWithProbe], awwf: ActorWithWaitingFor) {
     def receiving(semaphoreMsg: Any,
                   maxSeconds: Int = DEFAULT_SECONDS,
                   hint: String = DEFAULT_HINT): ActorWithWaitingFor = {
@@ -184,7 +185,7 @@ package object testkit {
   implicit def awpToTestProbe(awp: ActorWithProbe): TestProbe = awp.probe
   implicit def awpToEnrichActorWithProbe(awp: ActorWithProbe): EnrichActorWithProbe = EnrichActorWithProbe(awp)
 
-  case class EnrichActorWithProbe(awp: ActorWithProbe) {
+  protected case class EnrichActorWithProbe(awp: ActorWithProbe) {
     def eventuallyReceiveMsg(msg: Any, maxSeconds: Int = DEFAULT_SECONDS, hint: String = DEFAULT_HINT): Any = {
       val hintOrElse =
         if (hint.isEmpty)
@@ -216,9 +217,9 @@ package object testkit {
   }
 
   // Core
-  protected sealed trait RealActor
-  protected case class FromProps(f: ActorRef => Props) extends RealActor
-  protected case class FromRef(actorRef: ActorRef) extends RealActor
+  private sealed trait RealActor
+  private case class FromProps(f: ActorRef => Props) extends RealActor
+  private case class FromRef(actorRef: ActorRef) extends RealActor
   private class ActorWithProbeCore(realActor: RealActor, probe: TestProbe, maybeName: Option[String], verbose: Boolean)
       extends Actor
       with ActorLogging

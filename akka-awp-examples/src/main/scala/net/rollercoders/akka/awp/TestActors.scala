@@ -1,7 +1,6 @@
-package actorWithProbe
+package net.rollercoders.akka.awp
 
-import actorWithProbe.testkit.AWP
-import akka.actor.{Actor, ActorLogging, ActorRef, Kill, Props, Timers}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props, Timers}
 
 object TestActors {
   // - - - PING PONG - - -

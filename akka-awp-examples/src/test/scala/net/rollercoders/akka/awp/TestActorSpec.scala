@@ -1,13 +1,12 @@
-package actorWithProbe
+package net.rollercoders.akka.awp
 
-import actorWithProbe.TestActors.PingActor.Pong
-import actorWithProbe.TestActors.PongActor.Ping
-import actorWithProbe.TestActors.SillyActor.Envelop
-import actorWithProbe.TestActors.TimerActor.{Start, Stop}
-import actorWithProbe.TestActors.{PingActor, PongActor, SillyActor, TimerActor}
-import actorWithProbe.testkit._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
+import net.rollercoders.akka.awp.TestActors.PingActor.Pong
+import net.rollercoders.akka.awp.TestActors.PongActor.Ping
+import net.rollercoders.akka.awp.TestActors.SillyActor.Envelop
+import net.rollercoders.akka.awp.TestActors.TimerActor.{Start, Stop}
+import net.rollercoders.akka.awp.TestActors.{PingActor, PongActor, SillyActor, TimerActor}
 import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
 
 class TestActorSpec

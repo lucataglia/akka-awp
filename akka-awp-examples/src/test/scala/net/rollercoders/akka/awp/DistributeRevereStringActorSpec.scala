@@ -1,10 +1,9 @@
-package actorWithProbe
+package net.rollercoders.akka.awp
 
-import actorWithProbe.DistributeRevereStringWithRoundRobinActor.{Exec, Group, Pool, Result}
-import actorWithProbe.SlaveActor.Reverse
-import actorWithProbe.testkit.ActorWithProbe
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
+import net.rollercoders.akka.awp.DistributeRevereStringWithRoundRobinActor.{Exec, Group, Pool, Result}
+import net.rollercoders.akka.awp.SlaveActor.Reverse
 import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
 
 class DistributeRevereStringActorSpec

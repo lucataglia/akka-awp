@@ -1,13 +1,12 @@
-package actorWithProbe
+package net.rollercoders.akka.awp
 
-import DistributeRevereStringWithRoundRobinActor.Slaves
-import actorWithProbe.SlaveActor.Reverse
-import actorWithProbe.testkit.AWP
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.routing.{RoundRobinGroup, RoundRobinPool}
+import net.rollercoders.akka.awp.DistributeRevereStringWithRoundRobinActor.Slaves
 
 class DistributeRevereStringWithRoundRobinActor(slaves: Slaves) extends Actor with ActorLogging with Stash with AWP {
   import DistributeRevereStringWithRoundRobinActor._
+  import SlaveActor.Reverse
 
   override def preStart(): Unit = {
     slaves match {

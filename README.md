@@ -1,6 +1,13 @@
 # Akka-awp 
 A lightweight testing library which goal is to make integration tests on complex actors application easier.
 
+# Installation
+The artifacts are published to Maven Central.
+
+```scala
+libraryDependencies +=
+  "net.rollercoders.akka" %% "akka-awp-testkit" % "1.0.0-SNAPSHOT"
+```
 ## Table of contents
 - [Abstract](#abstract)
 - [Examples](#examples)

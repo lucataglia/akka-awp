@@ -1,16 +1,19 @@
-package net.rollercoders.akka.awp
+package examples
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
-import net.rollercoders.akka.awp.DistributeRevereStringWithRoundRobinActor.{Exec, Group, Pool, Result}
-import net.rollercoders.akka.awp.SlaveActor.Reverse
-import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
+import examples.DistributeRevereStringWithRoundRobinActor.{Exec, Group, Pool, Result}
+import examples.SlaveActor.Reverse
+import net.rollercoders.akka.awp.testkit._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.verbs.MustVerb
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class DistributeRevereStringActorSpec
     extends TestKit(ActorSystem("awp"))
     with ImplicitSender
-    with WordSpecLike
-    with MustMatchers
+    with AnyWordSpecLike
+    with MustVerb
     with BeforeAndAfterAll {
 
   override protected def afterAll(): Unit =

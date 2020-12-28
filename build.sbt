@@ -1,7 +1,7 @@
 import Dependencies._
 import sbt.Keys.libraryDependencies
 
-ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalaVersion := "2.13.4"
 ThisBuild / organization := "net.rollercoders.akka"
 ThisBuild / organizationName := "Rollercoders"
 ThisBuild / scmInfo := Some(
@@ -42,7 +42,8 @@ lazy val `akka-awp-testkit` = project
   .in(file("akka-awp-testkit"))
   .settings(
     name := "akka-awp-testkit",
-    libraryDependencies ++= actorWithProbeDeps
+    libraryDependencies ++= actorWithProbeDeps,
+    crossScalaVersions ++= Seq("2.12.12", "2.13.4")
   )
 
 lazy val `akka-awp-examples` = project
@@ -60,7 +61,7 @@ testAkkaAwp := {
   (`akka-awp-examples` / Test / test).value
 }
 
-scalacOptions := Seq(
+ThisBuild / scalacOptions := Seq(
   "-unchecked",
   "-deprecation",
   "-feature",

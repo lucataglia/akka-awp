@@ -1,8 +1,9 @@
-package net.rollercoders.akka.awp
+package examples
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.routing.{RoundRobinGroup, RoundRobinPool}
-import net.rollercoders.akka.awp.DistributeRevereStringWithRoundRobinActor.Slaves
+import examples.DistributeRevereStringWithRoundRobinActor.Slaves
+import net.rollercoders.akka.awp.`trait`.AWP
 
 class DistributeRevereStringWithRoundRobinActor(slaves: Slaves) extends Actor with ActorLogging with Stash with AWP {
   import DistributeRevereStringWithRoundRobinActor._

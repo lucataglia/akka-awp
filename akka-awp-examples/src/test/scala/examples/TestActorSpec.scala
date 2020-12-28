@@ -1,19 +1,24 @@
-package net.rollercoders.akka.awp
+package examples
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
-import net.rollercoders.akka.awp.TestActors.PingActor.Pong
-import net.rollercoders.akka.awp.TestActors.PongActor.Ping
-import net.rollercoders.akka.awp.TestActors.SillyActor.Envelop
-import net.rollercoders.akka.awp.TestActors.TimerActor.{Start, Stop}
-import net.rollercoders.akka.awp.TestActors.{PingActor, PongActor, SillyActor, TimerActor}
-import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpecLike}
+import examples.TestActors.PingActor.Pong
+import examples.TestActors.PongActor.Ping
+import examples.TestActors.SillyActor.Envelop
+import examples.TestActors.TimerActor.{Start, Stop}
+import examples.TestActors.{PingActor, PongActor, SillyActor, TimerActor}
+import net.rollercoders.akka.awp.testkit._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.verbs.MustVerb
+import org.scalatest.wordspec.AnyWordSpecLike
+
+import scala.language.postfixOps
 
 class TestActorSpec
     extends TestKit(ActorSystem("awp"))
     with ImplicitSender
-    with WordSpecLike
-    with MustMatchers
+    with AnyWordSpecLike
+    with MustVerb
     with BeforeAndAfterAll {
 
   override protected def afterAll(): Unit =

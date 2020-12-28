@@ -1,6 +1,9 @@
-package net.rollercoders.akka.awp
+package examples
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Timers}
+import net.rollercoders.akka.awp.`trait`.AWP
+
+import scala.language.postfixOps
 
 object TestActors {
   // - - - PING PONG - - -

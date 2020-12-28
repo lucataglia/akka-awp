@@ -1,4 +1,4 @@
-package net.rollercoders.akka
+package net.rollercoders.akka.awp
 
 import akka.actor.{
   Actor,
@@ -14,10 +14,10 @@ import akka.actor.{
 import akka.testkit.TestProbe
 
 import scala.concurrent.duration._
-import scala.language.implicitConversions
+import scala.language.{implicitConversions, postfixOps}
 import scala.reflect.ClassTag
 
-package object awp {
+package object testkit {
 
   private val DEFAULT_SECONDS = 5
   private val DEFAULT_HINT = ""
@@ -63,12 +63,6 @@ package object awp {
 
       ActorWithProbe(coreRef, probe)
     }
-  }
-
-  // Actor Enhancer
-  trait AWP {
-    this: Actor =>
-    implicit val awpSelf: ActorRef
   }
 
   // API
@@ -270,7 +264,7 @@ package object awp {
 
       case msg =>
         if (verbose)
-          log.info(s"$lStash ${msg.toString.withGreen} - $lSender ${sender.path}")
+          log.info(s"$lStash ${msg.toString.withGreen} - $lSender ${sender().path}")
 
         stash()
     }
@@ -282,7 +276,7 @@ package object awp {
 
       case msg =>
         if (verbose)
-          log.info(s"$lPrefix ${msg.toString.withGreen} - $lSender ${sender.path} $lReceiver ${ref.path}")
+          log.info(s"$lPrefix ${msg.toString.withGreen} - $lSender ${sender().path} $lReceiver ${ref.path}")
 
         probe.ref forward msg
         ref forward msg

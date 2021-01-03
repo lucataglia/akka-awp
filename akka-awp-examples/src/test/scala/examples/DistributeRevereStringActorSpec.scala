@@ -32,14 +32,14 @@ class DistributeRevereStringActorSpec
       val distributedSorter =
         ActorWithProbe
           .actorOf(ref =>
-            Props(new DistributeRevereStringWithRoundRobinActor(Pool(12)) {
+            Props(new DistributeRevereStringWithRoundRobinActor(Pool(10)) {
               override implicit val awpSelf: ActorRef = ref
             }))
           .withName("sorter-1")
           .build()
 
-      distributedSorter ! Exec(longString, 10)
-      distributedSorter eventuallyReceiveMsg Exec(longString, 10)
+      distributedSorter ! Exec(longString, 20)
+      distributedSorter eventuallyReceiveMsg Exec(longString, 20)
       distributedSorter eventuallyReceiveMsg Result(expected)
     }
 

@@ -6,7 +6,7 @@ The artifacts are published to Maven Central.
 
 ```scala
 libraryDependencies +=
-  "net.rollercoders.akka" %% "akka-awp-testkit" % "1.0.0-SNAPSHOT"
+  "net.rollercoders.akka" %% "akka-awp-testkit" % "1.0.0"
 ```
 ## Table of contents
 - [Abstract](#abstract)

@@ -71,7 +71,7 @@ package object testkit {
       tell(msg, sender)
 
     def tell(msg: Any, sender: ActorRef)(implicit system: ActorSystem): ActorWithWaitingFor = {
-      val awp = ActorWithProbe.actorOf(sender).build()
+      val awp = ActorWithProbe.actorOf(sender).withoutVerbose().build()
       ref tell (msg, awp)
 
       ActorWithWaitingFor(awp)

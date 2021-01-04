@@ -14,6 +14,9 @@ object Dependencies {
     val core = namespace %% "scalatest" % version
   }
 
-  lazy val actorWithProbeDeps =
-    Seq(akka.core % Provided, akka.test % Provided, scalaTest.core % Test)
+  lazy val akkaAwpTestKitDeps =
+    Seq(akka.core % Provided, akka.test % Provided)
+
+  lazy val akkaAwpExamplesDeps =
+    Seq(akka.core, akka.test, scalaTest.core)
 }

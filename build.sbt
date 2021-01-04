@@ -42,7 +42,7 @@ lazy val `akka-awp-testkit` = project
   .in(file("akka-awp-testkit"))
   .settings(
     name := "akka-awp-testkit",
-    libraryDependencies ++= actorWithProbeDeps,
+    libraryDependencies ++= akkaAwpTestKitDeps,
     crossScalaVersions ++= Seq("2.12.12", "2.13.4")
   )
 
@@ -50,6 +50,7 @@ lazy val `akka-awp-examples` = project
   .in(file("akka-awp-examples"))
   .settings(
     name := "akka-awp-examples",
+    libraryDependencies ++= akkaAwpExamplesDeps,
     skip in publish := true
   )
   .dependsOn(`akka-awp-testkit`)

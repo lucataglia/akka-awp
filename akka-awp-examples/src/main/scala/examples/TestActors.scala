@@ -46,7 +46,7 @@ object TestActors {
 
   object PongActor {
     case object Ping
-    def props(): Props = Props[PongActor]
+    def props(): Props = Props[PongActor]()
   }
 
   // - - - ACTOR THAT SEND A MESSAGE TO ITSELF - - -

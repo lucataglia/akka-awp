@@ -26,7 +26,7 @@ class TestActorSpec
 
   "A Ping Pong network" must {
     "send a Ping message to Pong Actor " in {
-      val pongRef = ActorWithProbe.actorOf(Props[PongActor]).withName("pong-1").build()
+      val pongRef = ActorWithProbe.actorOf(Props[PongActor]()).withName("pong-1").build()
       val pingRef = ActorWithProbe.actorOf(PingActor.props(pongRef)).withName("ping-1").build()
 
       // Low level API
@@ -46,7 +46,7 @@ class TestActorSpec
     }
 
     "send a Ping message and then have a Pong answer" in {
-      val pongRef = ActorWithProbe.actorOf(Props[PongActor]).withName("pong-2").build()
+      val pongRef = ActorWithProbe.actorOf(Props[PongActor]()).withName("pong-2").build()
       val pingRef =
         ActorWithProbe
           .actorOf(

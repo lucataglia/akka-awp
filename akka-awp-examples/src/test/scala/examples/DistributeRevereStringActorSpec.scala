@@ -62,7 +62,7 @@ class DistributeRevereStringActorSpec
   "Distribute Reverse String using routing group" must {
     "answer with the reversed string" in {
       val slaves = (0 until 10)
-        .map(i => ActorWithProbe.actorOf(Props[SlaveActor]).withName(s"slave_$i").build())
+        .map(i => ActorWithProbe.actorOf(Props[SlaveActor]()).withName(s"slave_$i").build())
 
       val slavesPath = slaves.map(_.path.toString).toList
 

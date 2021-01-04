@@ -12,7 +12,7 @@ class DistributeRevereStringWithRoundRobinActor(slaves: Slaves) extends Actor wi
   override def preStart(): Unit = {
     slaves match {
       case Pool(pool) =>
-        val router = context.actorOf(RoundRobinPool(pool).props(Props[SlaveActor]))
+        val router = context.actorOf(RoundRobinPool(pool).props(Props[SlaveActor]()))
         awpSelf ! Init(router, pool)
 
       case Group(paths) =>
@@ -83,7 +83,7 @@ class SlaveActor() extends Actor {
   import SlaveActor._
 
   override def receive: Receive = {
-    case Reverse(str, id) => sender ! Sorted(str.reverse, id)
+    case Reverse(str, id) => sender() ! Sorted(str.reverse, id)
   }
 }
 

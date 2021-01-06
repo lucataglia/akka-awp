@@ -11,8 +11,8 @@ libraryDependencies +=
 ## Table of contents
 - [Abstract](#abstract)
 - [Examples](#examples)
-    * [Distributed reverse string (high-level API)](#distributed-reverse-string)
-    * [Silly Actor (low-level API)](#silly-actor)
+    * [Distributed reverse string (low-level API)](#distributed-reverse-string)
+    * [Silly Actor (high-level API)](#silly-actor)
 - [Getting started](#getting-started)
     * [Create an ActorWithProbe instance](#create-an-actorwithprobe-instance)
     * [Testing an ActorWithProbe mailbox](#testing-an-actorwithprobe-mailbox)
